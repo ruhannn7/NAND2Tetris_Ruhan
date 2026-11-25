@@ -1,0 +1,592 @@
+// Pong game in Hack assembly
+// Controls: left/right arrow keys move the bat; 'q' or 'Q' exits.
+
+   @256
+   D=A
+   @SP
+   M=D
+   @Sys.init
+   0;JMP
+
+// function Main.main 0
+(Main.main)
+   @PongGame.newInstance
+   0;JMP
+(RET_MAIN_NEW)
+   @PongGame.run
+   0;JMP
+(RET_MAIN_RUN)
+   @PongGame.dispose
+   0;JMP
+(RET_MAIN_DISP)
+   @0
+   D=A
+   @SP
+   A=M
+   M=D
+   @SP
+   M=M+1
+   @LCL
+   D=M
+   @R13
+   M=D
+   @5
+   A=D-A
+   D=M
+   @R14
+   M=D
+   @SP
+   AM=M-1
+   D=M
+   @ARG
+   A=M
+   M=D
+   @ARG
+   D=M+1
+   @SP
+   M=D
+   @R13
+   AM=M-1
+   D=M
+   @THAT
+   M=D
+   @R13
+   AM=M-1
+   D=M
+   @THIS
+   M=D
+   @R13
+   AM=M-1
+   D=M
+   @ARG
+   M=D
+   @R13
+   AM=M-1
+   D=M
+   @LCL
+   M=D
+   @R14
+   A=M
+   0;JMP
+
+// Initialize game state in static RAM addresses:
+// RAM[100] = batX (220), RAM[101] = batWidth (50), RAM[102] = batY (246), RAM[103] = batHeight (6)
+// RAM[104] = ballX (0), RAM[105] = ballY (0), RAM[106] = dx (2), RAM[107] = dy (-2)
+// RAM[108] = score (0), RAM[109] = exitFlag (0)
+(PongGame.newInstance)
+   @220
+   D=A
+   @100
+   M=D
+   @50
+   D=A
+   @101
+   M=D
+   @246
+   D=A
+   @102
+   M=D
+   @6
+   D=A
+   @103
+   M=D
+   @0
+   D=A
+   @104
+   M=D
+   @105
+   M=D
+   @108
+   M=D
+   @109
+   M=D
+   @2
+   D=A
+   @106
+   M=D
+   @-2
+   D=A
+   @107
+   M=D
+   @RET_MAIN_NEW
+   0;JMP
+
+(PongGame.run)
+(PONG_LOOP)
+   @109
+   D=M
+   @RET_MAIN_RUN
+   D;JNE
+
+   // Clear previous bat & ball area
+   @110
+   M=0
+   @111
+   M=0
+   @DRAW_FRAME
+   0;JMP
+
+(AFTER_ERASE)
+   // Read keyboard (KBD = 24576)
+   // Left arrow = 130, Right arrow = 132, 'q' = 113, 'Q' = 81
+   @KBD
+   D=M
+   @112
+   M=D
+
+   @113
+   D=A
+   @112
+   D=D-M
+   @SET_EXIT
+   D;JEQ
+
+   @81
+   D=A
+   @112
+   D=D-M
+   @SET_EXIT
+   D;JEQ
+
+   @130
+   D=A
+   @112
+   D=D-M
+   @MOVE_LEFT
+   D;JEQ
+
+   @132
+   D=A
+   @112
+   D=D-M
+   @MOVE_RIGHT
+   D;JEQ
+
+   @UPDATE_BALL
+   0;JMP
+
+(SET_EXIT)
+   @109
+   M=1
+   @PONG_LOOP
+   0;JMP
+
+(MOVE_LEFT)
+   @4
+   D=A
+   @100
+   MD=M-D
+   @LEFT_CLAMP_OK
+   D;JGE
+   @100
+   M=0
+(LEFT_CLAMP_OK)
+   @UPDATE_BALL
+   0;JMP
+
+(MOVE_RIGHT)
+   @4
+   D=A
+   @100
+   D=M+D
+   @113
+   M=D
+   @101
+   D=M
+   @113
+   D=D+M
+   @512
+   D=D-A
+   @UPDATE_BALL
+   D;JGT
+   @113
+   D=M
+   @100
+   M=D
+   @UPDATE_BALL
+   0;JMP
+
+(UPDATE_BALL)
+   @106
+   D=M
+   @104
+   MD=M+D
+   @BALL_X_OK
+   D;JGE
+   @104
+   M=0
+   @106
+   M=-M
+(BALL_X_OK)
+   @104
+   D=M
+   @6
+   D=D+A
+   @512
+   D=D-A
+   @BALL_RIGHT_OK
+   D;JLT
+   @506
+   D=A
+   @104
+   M=D
+   @106
+   M=-M
+(BALL_RIGHT_OK)
+   @107
+   D=M
+   @105
+   MD=M+D
+   @BALL_Y_OK
+   D;JGE
+   @105
+   M=0
+   @107
+   M=-M
+(BALL_Y_OK)
+   // Check paddle collision when ball bottom reaches batY
+   @105
+   D=M
+   @6
+   D=D+A
+   @102
+   D=D-M
+   @CHECK_MISS
+   D;JLT
+
+   // ballX + 6 >= batX ?
+   @104
+   D=M
+   @6
+   D=D+A
+   @100
+   D=D-M
+   @CHECK_MISS
+   D;JLT
+
+   // ballX <= batX + batWidth ?
+   @100
+   D=M
+   @101
+   D=D+M
+   @104
+   D=D-M
+   @CHECK_MISS
+   D;JLT
+
+   // Bounce up & increment score
+   @107
+   M=-M
+   @108
+   M=M+1
+   @DRAW_ACTIVE
+   0;JMP
+
+(CHECK_MISS)
+   @105
+   D=M
+   @6
+   D=D+A
+   @255
+   D=D-A
+   @DRAW_ACTIVE
+   D;JLT
+   @0
+   D=A
+   @104
+   M=D
+   @105
+   M=D
+   @2
+   D=A
+   @106
+   M=D
+   @-2
+   D=A
+   @107
+   M=D
+   @DRAW_ACTIVE
+   0;JMP
+
+(DRAW_ACTIVE)
+   @110
+   M=-1
+   @111
+   M=1
+   @DRAW_FRAME
+   0;JMP
+
+(AFTER_DRAW_ACTIVE)
+   // Short delay loop so gameplay speed is readable
+   @2500
+   D=A
+   @114
+   M=D
+(DELAY_LOOP)
+   @114
+   MD=M-1
+   @DELAY_LOOP
+   D;JGT
+
+   @PONG_LOOP
+   0;JMP
+
+// Draws or erases (based on RAM[110]: -1 black, 0 white) bat and 6x6 ball
+(DRAW_FRAME)
+   // Draw bat rows: y from batY (102) to batY + batHeight (102 + 103)
+   @102
+   D=M
+   @115
+   M=D
+   @102
+   D=M
+   @103
+   D=D+M
+   @116
+   M=D
+
+(BAT_ROW_LOOP)
+   @115
+   D=M
+   @116
+   D=D-M
+   @BALL_DRAW_START
+   D;JGE
+
+   // rowAddr = SCREEN + 32 * y + (batX / 16)
+   @115
+   D=M
+   @117
+   M=D
+   @118
+   M=0
+   @32
+   D=A
+   @119
+   M=D
+(MUL32_BAT)
+   @119
+   D=M
+   @MUL32_BAT_DONE
+   D;JEQ
+   @117
+   D=M
+   @118
+   M=D+M
+   @119
+   M=M-1
+   @MUL32_BAT
+   0;JMP
+(MUL32_BAT_DONE)
+   @100
+   D=M
+   @120
+   M=D
+   @121
+   M=0
+(DIV16_BAT)
+   @120
+   D=M
+   @16
+   D=D-A
+   @DIV16_BAT_DONE
+   D;JLT
+   @120
+   M=D
+   @121
+   M=M+1
+   @DIV16_BAT
+   0;JMP
+(DIV16_BAT_DONE)
+   @SCREEN
+   D=A
+   @118
+   D=D+M
+   @121
+   D=D+M
+   @122
+   M=D
+
+   // Bitmask for 16px word starting at bit (batX % 16)
+   @120
+   D=M
+   @123
+   M=D
+   @1
+   D=A
+   @124
+   M=D
+(SHIFT_BAT_MASK)
+   @123
+   D=M
+   @SHIFT_BAT_DONE
+   D;JEQ
+   @124
+   D=M
+   M=D+M
+   @123
+   M=M-1
+   @SHIFT_BAT_MASK
+   0;JMP
+(SHIFT_BAT_DONE)
+   @124
+   D=M
+   @125
+   M=D-1
+   @125
+   MD=!M
+   @110
+   D=M
+   @ERASE_BAT_WORD
+   D;JEQ
+   @122
+   A=M
+   M=M|D
+   @NEXT_BAT_ROW
+   0;JMP
+(ERASE_BAT_WORD)
+   @125
+   D=M
+   @122
+   A=M
+   M=M&D
+(NEXT_BAT_ROW)
+   @115
+   M=M+1
+   @BAT_ROW_LOOP
+   0;JMP
+
+(BALL_DRAW_START)
+   // Draw 6x6 ball at (ballX=104, ballY=105)
+   @105
+   D=M
+   @115
+   M=D
+   @105
+   D=M
+   @6
+   D=D+A
+   @116
+   M=D
+
+(BALL_ROW_LOOP)
+   @115
+   D=M
+   @116
+   D=D-M
+   @BALL_DRAW_DONE
+   D;JGE
+
+   @115
+   D=M
+   @118
+   M=0
+   @32
+   D=A
+   @119
+   M=D
+(MUL32_BALL)
+   @119
+   D=M
+   @MUL32_BALL_DONE
+   D;JEQ
+   @115
+   D=M
+   @118
+   M=D+M
+   @119
+   M=M-1
+   @MUL32_BALL
+   0;JMP
+(MUL32_BALL_DONE)
+   @104
+   D=M
+   @120
+   M=D
+   @121
+   M=0
+(DIV16_BALL)
+   @120
+   D=M
+   @16
+   D=D-A
+   @DIV16_BALL_DONE
+   D;JLT
+   @120
+   M=D
+   @121
+   M=M+1
+   @DIV16_BALL
+   0;JMP
+(DIV16_BALL_DONE)
+   @SCREEN
+   D=A
+   @118
+   D=D+M
+   @121
+   D=D+M
+   @122
+   M=D
+
+   // 6-bit mask (63 = 0b111111) shifted left by (ballX % 16)
+   @120
+   D=M
+   @123
+   M=D
+   @63
+   D=A
+   @124
+   M=D
+(SHIFT_BALL_MASK)
+   @123
+   D=M
+   @SHIFT_BALL_DONE
+   D;JEQ
+   @124
+   D=M
+   M=D+M
+   @123
+   M=M-1
+   @SHIFT_BALL_MASK
+   0;JMP
+(SHIFT_BALL_DONE)
+   @124
+   D=M
+   @125
+   M=!D
+   @110
+   D=M
+   @ERASE_BALL_WORD
+   D;JEQ
+   @122
+   A=M
+   M=M|D
+   @NEXT_BALL_ROW
+   0;JMP
+(ERASE_BALL_WORD)
+   @125
+   D=M
+   @122
+   A=M
+   M=M&D
+(NEXT_BALL_ROW)
+   @115
+   M=M+1
+   @BALL_ROW_LOOP
+   0;JMP
+
+(BALL_DRAW_DONE)
+   @111
+   D=M
+   @AFTER_DRAW_ACTIVE
+   D;JNE
+   @AFTER_ERASE
+   0;JMP
+
+(PongGame.dispose)
+   @RET_MAIN_DISP
+   0;JMP
+
+(Sys.init)
+   @Main.main
+   0;JMP
