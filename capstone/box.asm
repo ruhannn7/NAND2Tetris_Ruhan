@@ -1,88 +1,59 @@
-// Draws a 64-pixel (4-word) wide by 20-row tall box starting at row 15
-// on the left edge of the screen while a key is pressed (KBD != 0),
-// and clears it when no key is pressed (KBD == 0).
-
 (LOOP)
-   @KBD
-   D=M
-   @CLEAR
-   D;JEQ
+@KBD
+D=M
+@BLACK
+D;JNE
 
-   D=0
-   D=!D
-   @color
-   M=D
-   @DRAW
-   0;JMP
+@COLOR
+M=0
+@DRAW
+0;JMP
 
-(CLEAR)
-   @color
-   M=0
+(BLACK)
+@COLOR
+M=-1
 
 (DRAW)
-   // Row 15 start address: 16384 + 15 * 32 = 16864
-   @16864
-   D=A
-   @rowAddr
-   M=D
+@16864  // 16384 + (32 * k)
+D=A
+@ADDR
+M=D
 
-   @20
-   D=A
-   @rows
-   M=D
+@20
+D=A
+@ROWS
+M=D
 
 (ROW_LOOP)
-   @rows
-   D=M
-   @LOOP
-   D;JEQ
+@4
+D=A
+@COLS
+M=D
 
-   @rowAddr
-   D=M
-   @wAddr
-   M=D
+(COL_LOOP)
+@COLOR
+D=M
+@ADDR
+A=M
+M=D
 
-   // Word 0 (pixels 0..15)
-   @color
-   D=M
-   @wAddr
-   A=M
-   M=D
+@ADDR
+M=M+1
 
-   // Word 1 (pixels 16..31)
-   @wAddr
-   M=M+1
-   @color
-   D=M
-   @wAddr
-   A=M
-   M=D
+@COLS
+MD=M-1
+@COL_LOOP
+D;JGT
 
-   // Word 2 (pixels 32..47)
-   @wAddr
-   M=M+1
-   @color
-   D=M
-   @wAddr
-   A=M
-   M=D
+@28
+D=A
+@ADDR
+M=D+M
 
-   // Word 3 (pixels 48..63)
-   @wAddr
-   M=M+1
-   @color
-   D=M
-   @wAddr
-   A=M
-   M=D
+@ROWS
+MD=M-1
+@ROW_LOOP
+D;JGT
 
-   // Move down 1 row (+32 screen words)
-   @32
-   D=A
-   @rowAddr
-   M=D+M
-
-   @rows
-   M=M-1
-   @ROW_LOOP
-   0;JMP
+@LOOP
+0;JMP
